@@ -7,7 +7,12 @@ const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ extended: false }));
+
+// Define Routes
+app.use('/api/auth', require('./routes/auth'));
+const carbonRoutes = require('./routes/carbonRoutes');
+app.use('/api/carbon', carbonRoutes);
 
 // Test route
 app.get('/', (req, res) => {
