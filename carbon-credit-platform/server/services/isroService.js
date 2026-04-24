@@ -5,11 +5,12 @@ const path = require('path');
 const verifyWithSatellite = (ngoWallet, landArea) => {
     return new Promise((resolve, reject) => {
         // Find the python script path
-        const pythonScript = path.join(__dirname, 'isro_math.py');
+        const pythonScript = path.join(__dirname, 'gee_verifier.py');
         
-        // Spawn Python process: 'python server/services/isro_math.py <wallet> <area>'
-        // Note: Use 'python3' if you are on Mac/Linux
-        const pythonProcess = spawn('python', [pythonScript, ngoWallet, landArea]);
+        // Spawn Python process with GEE project ID env var
+        const pythonProcess = spawn('python', [pythonScript, '11.6643', '76.0429', String(landArea)], {
+            env: { ...process.env, GEE_PROJECT_ID: process.env.GEE_PROJECT_ID || 'carboncredits-494302' }
+        });
 
         let resultData = "";
 

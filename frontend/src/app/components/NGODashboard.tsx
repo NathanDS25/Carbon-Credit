@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Upload, Calendar, MessageCircle, TrendingUp, Leaf, BarChart3, Loader2, ExternalLink, Download } from 'lucide-react';
+import { Upload, Calendar, MessageCircle, TrendingUp, Leaf, BarChart3, Loader2, Download } from 'lucide-react';
 import { verifyAndMintCredits, uploadImage, triggerAction, fetchCompanies } from '../api/carbonApi';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import jsPDF from 'jspdf';
 import { TradingDashboard } from './TradingDashboard';
 import { ScheduleMeetModal } from './ScheduleMeetModal';
+import { SatelliteVerificationPanel } from './SatelliteVerificationPanel';
 
 interface Company {
   id: number;
@@ -199,19 +199,19 @@ export function NGODashboard() {
         </div>
       </div>
 
-      {/* ISRO Satellite Audit Section */}
+      {/* GEE Satellite Audit Section */}
       <div className="bg-card backdrop-blur-sm rounded-2xl p-6 border border-border shadow-sm hover:shadow-lg transition-all duration-300">
         <div className="flex items-center gap-3 mb-4">
           <div className="bg-primary/10 p-2 rounded-xl">
             <Leaf className="w-5 h-5 text-primary" />
           </div>
-          <h3 className="m-0">ISRO Satellite Audit</h3>
+          <h3 className="m-0">Satellite Land Audit (Google Earth Engine)</h3>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Verify your plantation land area to automatically mint carbon credits via satellite imagery.
+          Verify your plantation using real Sentinel-2 satellite imagery. NDVI &gt; 0.4 required to mint carbon credits.
         </p>
         
-        <div className="flex gap-4 items-start">
+        <div className="flex gap-4 items-start mb-4">
           <div className="flex-1">
             <input
               type="number"
@@ -231,45 +231,32 @@ export function NGODashboard() {
             {isAuditing ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Analyzing ISRO Data...
+                Scanning Satellite Data...
               </>
             ) : (
-              'Verify'
+              '🛰️ Run Satellite Verification'
             )}
           </button>
         </div>
 
-        {auditResult && !auditResult.error && (
-          <Alert className="mt-6 border-primary/20 bg-primary/5">
-            <Leaf className="h-4 w-4 text-primary" />
-            <AlertTitle className="text-primary font-semibold">Verification Successful!</AlertTitle>
-            <AlertDescription className="text-sm mt-2 flex flex-col gap-1">
-              <span>NDVI Score: <strong>{auditResult.ndviScore}</strong></span>
-              <span>Credits Minted: <strong>{auditResult.creditsMinted}</strong></span>
-              <a 
-                href={auditResult.etherscanLink} 
-                target="_blank" 
-                rel="noreferrer"
-                className="text-primary hover:underline flex items-center gap-1 mt-1 font-medium"
-              >
-                View on Etherscan <ExternalLink className="w-3 h-3" />
-              </a>
-              <button
-                onClick={generateCertificate}
-                className="mt-3 bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-all hover:shadow-primary/50 flex items-center gap-2 self-start"
-              >
-                <Download className="w-4 h-4" />
-                Download Certificate
-              </button>
-            </AlertDescription>
-          </Alert>
+        {(isAuditing || auditResult) && (
+          <div className="mt-2">
+            <SatelliteVerificationPanel
+              result={auditResult || { ndviScore: 0, creditsMinted: 0, etherscanLink: '' }}
+              isVerifying={isAuditing}
+              landArea={landArea ? Number(landArea) : undefined}
+            />
+          </div>
         )}
 
-        {auditResult && auditResult.error && (
-          <Alert variant="destructive" className="mt-6">
-            <AlertTitle>Verification Failed</AlertTitle>
-            <AlertDescription>{auditResult.error}</AlertDescription>
-          </Alert>
+        {auditResult && !auditResult.error && (
+          <button
+            onClick={generateCertificate}
+            className="mt-4 bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-all flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Download PDF Certificate
+          </button>
         )}
       </div>
 

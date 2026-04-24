@@ -78,3 +78,11 @@ export const submitCreditRequest = async (payload: { companyName: string; credit
   }
 };
 
+export const fetchRegionalPrices = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/carbon/regional-prices`);
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || { error: "Failed to fetch regional prices." };
+  }
+};

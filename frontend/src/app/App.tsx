@@ -3,6 +3,7 @@ import { Building2, Leaf, Shield, LogOut } from 'lucide-react';
 import { NGODashboard } from './components/NGODashboard';
 import { CompanyDashboard } from './components/CompanyDashboard';
 import { AdminDashboard } from './components/AdminDashboard';
+import { WalletConnect } from './components/WalletConnect';
 
 type UserRole = 'ngo' | 'company' | 'admin';
 
@@ -95,13 +96,16 @@ export default function App() {
               <p className="text-xs text-muted-foreground">Carbon Credit Marketplace</p>
             </div>
           </div>
-          <button
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <WalletConnect />
+            <button
             onClick={handleLogout}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
           >
             <LogOut className="w-4 h-4" />
             Switch Dashboard
           </button>
+          </div>
         </div>
       </header>
 

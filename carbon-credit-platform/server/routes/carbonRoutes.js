@@ -5,7 +5,7 @@ const multer = require('multer');
 const path = require('path');
 const { 
   verifyAndMint, getTradingData, handleAction,
-  getNGOs, getCompanies, getCreditRequests, createCreditRequest
+  getNGOs, getCompanies, getCreditRequests, createCreditRequest, getRegionalPrices
 } = require('../controllers/carbonController');
 
 // Set up Multer for photo uploads
@@ -37,5 +37,6 @@ router.get('/ngos', getNGOs);
 router.get('/companies', getCompanies);
 router.get('/requests', getCreditRequests);
 router.post('/requests', createCreditRequest);
+router.get('/regional-prices', getRegionalPrices);
 
 module.exports = router;

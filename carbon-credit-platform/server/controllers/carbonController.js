@@ -20,19 +20,21 @@ const verifyAndMint = async (req, res) => {
         // 1. Call the Python Bridge
         const satelliteData = await verifyWithSatellite(ngoWallet, landAreaHectares);
 
+        // GEE returns: { ndviScore, credits, verified, satellite }
         if (!satelliteData.verified) {
             return res.status(400).json({ 
                 error: "Verification failed", 
-                ndvi: satelliteData.ndvi,
-                message: "Vegetation density is too low for credits." 
+                ndviScore: satelliteData.ndviScore,
+                message: "Vegetation density is too low for credits (NDVI < 0.4)." 
             });
         }
 
-        console.log(`🌿 Python Analysis Complete: NDVI Score is ${satelliteData.ndvi}`);
+        console.log(`🌿 GEE Analysis Complete: NDVI Score is ${satelliteData.ndviScore}`);
 
         // 2. Execute Blockchain Minting
         console.log(`⛓️ Minting ${satelliteData.credits} credits on-chain...`);
-        const tx = await carbonContract.mintCredits(ngoWallet, satelliteData.credits);
+        const creditsToMint = satelliteData.credits;
+        const tx = await carbonContract.mintCredits(ngoWallet, creditsToMint);
         console.log(`⏳ Waiting for block confirmation...`);
         await tx.wait();
 
@@ -42,7 +44,7 @@ const verifyAndMint = async (req, res) => {
             { walletAddress: ngoWallet },
             { 
                 $inc: { 
-                    creditBalance: satelliteData.credits,
+                    creditBalance: creditsToMint,
                     treesPlanted: Math.floor(landAreaHectares * 100)
                 } 
             },
@@ -53,15 +55,16 @@ const verifyAndMint = async (req, res) => {
         await Trade.create({
             buyer: 'Carbon Registry',
             seller: ngoWallet.slice(0, 10) + '...',
-            credits: satelliteData.credits,
+            credits: creditsToMint,
             price: 15.5,
             time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
         });
 
         res.status(200).json({
             success: true,
-            creditsMinted: satelliteData.credits,
-            ndviScore: satelliteData.ndvi,
+            creditsMinted: creditsToMint,
+            ndviScore: satelliteData.ndviScore,
+            satellite: satelliteData.satellite,
             txHash: tx.hash,
             etherscanLink: `https://sepolia.etherscan.io/tx/${tx.hash}`
         });
@@ -166,6 +169,26 @@ const createCreditRequest = async (req, res) => {
     }
 };
 
-module.exports = { verifyAndMint, getTradingData, handleAction, getNGOs, getCompanies, getCreditRequests, createCreditRequest };
+// GET /api/carbon/regional-prices — regional carbon credit price data
+const getRegionalPrices = async (req, res) => {
+    try {
+        // Real-world inspired regional carbon credit pricing (USD per tonne CO2)
+        const regions = [
+            { region: 'Western Ghats, India', lat: 11.66, lon: 76.04, price: 18.5, trend: '+3.2%', volume: 12400, ndviAvg: 0.72, type: 'Forest Conservation' },
+            { region: 'Amazon Basin, Brazil', lat: -3.46, lon: -62.21, price: 24.3, trend: '+1.8%', volume: 89200, ndviAvg: 0.81, type: 'Rainforest' },
+            { region: 'Congo Basin, Africa', lat: -1.65, lon: 23.97, price: 21.1, trend: '+2.5%', volume: 45600, ndviAvg: 0.79, type: 'Tropical Forest' },
+            { region: 'Sundarbans, India', lat: 21.94, lon: 89.18, price: 16.8, trend: '-0.5%', volume: 8700, ndviAvg: 0.68, type: 'Mangrove' },
+            { region: 'Borneo, Indonesia', lat: 1.66, lon: 113.38, price: 22.7, trend: '+4.1%', volume: 67300, ndviAvg: 0.77, type: 'Tropical Forest' },
+            { region: 'Atlantic Forest, Brazil', lat: -23.55, lon: -46.63, price: 19.2, trend: '+0.9%', volume: 23100, ndviAvg: 0.65, type: 'Reforestation' },
+            { region: 'Himalayan Foothills, India', lat: 29.39, lon: 79.46, price: 14.6, trend: '-1.2%', volume: 5400, ndviAvg: 0.58, type: 'Alpine Forest' },
+            { region: 'Mekong Delta, Vietnam', lat: 10.45, lon: 105.63, price: 13.9, trend: '+0.3%', volume: 11200, ndviAvg: 0.54, type: 'Wetland' },
+        ];
+        res.status(200).json(regions);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+module.exports = { verifyAndMint, getTradingData, handleAction, getNGOs, getCompanies, getCreditRequests, createCreditRequest, getRegionalPrices };
 
 
