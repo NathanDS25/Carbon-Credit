@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
 import { AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, DollarSign, Loader2 } from 'lucide-react';
-import { fetchTradingData } from '../api/carbonApi';
+import { fetchTradingData, fetchNGOs } from '../api/carbonApi';
+import { useWallet } from './WalletProvider';
+import { ethers } from 'ethers';
+import CarbonCreditABI from '../config/CarbonCreditABI.json';
+
+const contractAddress = '0x12d8Ef3893D4e37dffb6a0caaA2864Aa8D1e8b93'; // Replace with your contract address
 
 const orderBook = {
   buy: [
@@ -22,20 +27,54 @@ const orderBook = {
 export function TradingDashboard() {
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [ngos, setNgos] = useState<any[]>([]);
+  const { address } = useWallet();
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const result = await fetchTradingData();
-        setData(result);
+        const [tradingData, ngoData] = await Promise.all([
+          fetchTradingData(),
+          fetchNGOs()
+        ]);
+        setData(tradingData);
+        setNgos(ngoData);
       } catch (error) {
-        console.error("Failed to load trading data", error);
+        console.error("Failed to load data", error);
       } finally {
         setIsLoading(false);
       }
     };
     loadData();
   }, []);
+
+  const handleBuyCredits = async (ngoAddress: string, amount: number, price: number) => {
+    if (!address) {
+      alert('Please connect your wallet first.');
+      return;
+    }
+
+    if (!window.ethereum) {
+      alert('Please install MetaMask!');
+      return;
+    }
+
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(contractAddress, CarbonCreditABI, signer);
+
+      const totalPrice = ethers.parseEther((amount * price).toString());
+
+      const tx = await contract.buyCredits(ngoAddress, amount, { value: totalPrice });
+      alert(`Transaction sent! Hash: ${tx.hash}`);
+      await tx.wait();
+      alert('Transaction confirmed!');
+    } catch (error) {
+      console.error('Error buying credits:', error);
+      alert('Failed to buy credits.');
+    }
+  };
 
   if (isLoading || !data) {
     return (
@@ -100,7 +139,30 @@ export function TradingDashboard() {
         </div>
       </div>
 
-      {/* Main Charts Row */}
+      {/* NGOs offering credits */}
+      <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+        <h3 className="text-lg font-semibold mb-4">Credits for Sale</h3>
+        <div className="space-y-4">
+          {ngos.map((ngo) => (
+            <div key={ngo._id} className="flex items-center justify-between p-4 bg-accent/50 rounded-xl">
+              <div>
+                <p className="font-semibold">{ngo.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {ngo.creditsAvailable} credits available at ${data.currentPrice} each
+                </p>
+              </div>
+              <button
+                onClick={() => handleBuyCredits(ngo.walletAddress, 100, parseFloat(data.currentPrice))} // Example: buying 100 credits
+                className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                Buy 100 Credits
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Trading Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Price Chart */}
         <div className="lg:col-span-2 bg-card backdrop-blur-sm rounded-2xl p-6 border border-border shadow-sm hover:shadow-lg transition-all duration-300">
