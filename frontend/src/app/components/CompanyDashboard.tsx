@@ -66,27 +66,27 @@ export function CompanyDashboard() {
   return (
     <div className="space-y-6">
       {/* Tab Navigation */}
-      <div className="bg-card backdrop-blur-sm rounded-2xl p-2 border border-border shadow-sm inline-flex gap-2">
+      <div className="flex gap-1 p-1 bg-muted/60 rounded-xl border border-border w-fit">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`px-6 py-2 rounded-xl transition-colors flex items-center gap-2 ${
+          className={`px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
             activeTab === 'overview'
-              ? 'bg-primary text-primary-foreground'
+              ? 'bg-card text-foreground shadow-sm border border-border'
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          <Building2 className="w-4 h-4" />
+          <Building2 className="w-3.5 h-3.5" />
           Overview
         </button>
         <button
           onClick={() => setActiveTab('trading')}
-          className={`px-6 py-2 rounded-xl transition-colors flex items-center gap-2 ${
+          className={`px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
             activeTab === 'trading'
-              ? 'bg-primary text-primary-foreground'
+              ? 'bg-card text-foreground shadow-sm border border-border'
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          <BarChart3 className="w-4 h-4" />
+          <BarChart3 className="w-3.5 h-3.5" />
           Trading
         </button>
       </div>
@@ -97,45 +97,34 @@ export function CompanyDashboard() {
         <>
       {/* Header Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-card backdrop-blur-sm rounded-2xl p-6 border border-border shadow-sm hover:shadow-primary/20 hover:-translate-y-1 transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-muted-foreground text-sm">Total Credits Needed</p>
-              <h3 className="mt-1">8,200</h3>
-            </div>
-            <div className="bg-primary/10 p-3 rounded-xl">
-              <Target className="w-6 h-6 text-primary" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-card backdrop-blur-sm rounded-2xl p-6 border border-border shadow-sm hover:shadow-primary/20 hover:-translate-y-1 transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-muted-foreground text-sm">Active Requests</p>
-              <h3 className="mt-1">{requests.length}</h3>
-            </div>
-            <div className="bg-primary/10 p-3 rounded-xl">
-              <Building2 className="w-6 h-6 text-primary" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-card backdrop-blur-sm rounded-2xl p-6 border border-border shadow-sm hover:shadow-primary/20 hover:-translate-y-1 transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-muted-foreground text-sm">NGO Partners</p>
-              <h3 className="mt-1">12</h3>
-            </div>
-            <div className="bg-primary/10 p-3 rounded-xl">
-              <MessageCircle className="w-6 h-6 text-primary" />
+        {[
+          { label: 'Total Credits Needed', value: '8,200', icon: Target, color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', sub: 'Across all requests' },
+          { label: 'Active Requests', value: requests.length, icon: Building2, color: '#10b981', bg: 'rgba(16,185,129,0.1)', sub: 'Currently open' },
+          { label: 'NGO Partners', value: '12', icon: MessageCircle, color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', sub: 'Available to connect' },
+        ].map(({ label, value, icon: Icon, color, bg, sub }) => (
+          <div key={label}
+            className="bg-card rounded-2xl border border-border shadow-sm hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+            style={{ boxShadow: `0 0 0 1px ${color}20` }}
+          >
+            <div className="h-1 w-full" style={{ background: `linear-gradient(90deg, ${color}, ${color}80)` }} />
+            <div className="p-6 flex items-center justify-between">
+              <div>
+                <p className="text-muted-foreground text-xs uppercase tracking-wide font-medium">{label}</p>
+                <p className="text-3xl font-bold text-foreground mt-1">{value}</p>
+                <p className="text-xs text-muted-foreground mt-1">{sub}</p>
+              </div>
+              <div className="p-3 rounded-xl" style={{ background: bg }}>
+                <Icon className="w-6 h-6" style={{ color }} />
+              </div>
             </div>
           </div>
-        </div>
+        ))}
       </div>
 
       {/* Create New Request */}
-      <div className="bg-card backdrop-blur-sm rounded-2xl p-6 border border-border shadow-sm hover:shadow-lg transition-all duration-300">
+      <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300">
+        <div className="h-0.5 w-full bg-gradient-to-r from-blue-400 to-indigo-500" />
+        <div className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h3>Credit Requests</h3>
           <button
@@ -204,11 +193,15 @@ export function CompanyDashboard() {
             </div>
           ))}
         </div>
+        </div>
       </div>
 
       {/* Available NGOs */}
-      <div className="bg-card backdrop-blur-sm rounded-2xl p-6 border border-border shadow-sm hover:shadow-lg transition-all duration-300">
-        <h3 className="mb-4">NGO Partners</h3>
+      <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300">
+        <div className="h-0.5 w-full bg-gradient-to-r from-violet-400 to-purple-500" />
+        <div className="p-6">
+        <h3 className="mb-1 text-base font-semibold">NGO Partners</h3>
+        <p className="text-xs text-muted-foreground mb-4">Connect with verified conservation organisations</p>
         <div className="space-y-3">
           {mockNGOs.map((ngo) => (
             <div
@@ -246,6 +239,7 @@ export function CompanyDashboard() {
               </div>
             </div>
           ))}
+        </div>
         </div>
       </div>
         </>
