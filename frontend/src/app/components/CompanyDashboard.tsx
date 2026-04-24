@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Calendar, MessageCircle, Plus, Building2, Target, BarChart3, Loader2 } from 'lucide-react';
+import { Calendar, MessageCircle, Plus, Building2, Target, BarChart3, Loader2, Globe } from 'lucide-react';
 import { triggerAction } from '../api/carbonApi';
 import { TradingDashboard } from './TradingDashboard';
 import { ScheduleMeetModal } from './ScheduleMeetModal';
+import { CarbonCreditHeatMap } from './CarbonCreditHeatMap';
 
 interface CreditRequest {
   id: number;
@@ -34,7 +35,7 @@ export function CompanyDashboard() {
   ]);
 
   const [showNewRequest, setShowNewRequest] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'trading'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'map' | 'trading'>('overview');
   const [scheduleMeetModal, setScheduleMeetModal] = useState<{ isOpen: boolean; ngoName: string }>({
     isOpen: false,
     ngoName: '',
@@ -65,34 +66,36 @@ export function CompanyDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Tab Navigation */}
-      <div className="flex gap-1 p-1 bg-muted/60 rounded-xl border border-border w-fit">
-        <button
-          onClick={() => setActiveTab('overview')}
-          className={`px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-            activeTab === 'overview'
-              ? 'bg-card text-foreground shadow-sm border border-border'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Building2 className="w-3.5 h-3.5" />
-          Overview
-        </button>
-        <button
-          onClick={() => setActiveTab('trading')}
-          className={`px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-            activeTab === 'trading'
-              ? 'bg-card text-foreground shadow-sm border border-border'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <BarChart3 className="w-3.5 h-3.5" />
-          Trading
-        </button>
+      <div style={{ display: 'flex', gap: '6px', padding: '6px', background: 'rgba(255,255,255,0.03)', borderRadius: '14px', border: '1px solid rgba(82,183,136,0.12)', width: 'fit-content' }}>
+        {[
+          { key: 'overview', label: 'Overview', icon: <Building2 size={14} /> },
+          { key: 'map', label: '🌍 Find Credits (Map)', icon: <Globe size={14} /> },
+          { key: 'trading', label: 'Trading', icon: <BarChart3 size={14} /> },
+        ].map(({ key, label, icon }) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key as any)}
+            style={{
+              padding: '8px 18px', borderRadius: '10px',
+              fontSize: '13px', fontWeight: '600',
+              background: activeTab === key ? 'rgba(45,134,89,0.3)' : 'transparent',
+              border: `1px solid ${activeTab === key ? 'rgba(82,183,136,0.5)' : 'transparent'}`,
+              color: activeTab === key ? '#52b788' : '#64748b',
+              cursor: 'pointer', transition: 'all 0.2s',
+              display: 'flex', alignItems: 'center', gap: '6px',
+            }}
+          >
+            {icon} {label}
+          </button>
+        ))}
       </div>
 
       {activeTab === 'trading' ? (
         <TradingDashboard />
+      ) : activeTab === 'map' ? (
+        <CarbonCreditHeatMap
+          onScheduleMeet={(ngoName) => setScheduleMeetModal({ isOpen: true, ngoName })}
+        />
       ) : (
         <>
       {/* Header Stats */}
