@@ -28,7 +28,10 @@ app.get('/', (req, res) => {
 });
 
 // Connect to MongoDB Atlas
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect(process.env.MONGO_URI, {
+    serverSelectionTimeoutMS: 30000, // Keep trying to send operations for 30 seconds
+    socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+})
   .then(() => console.log('MongoDB Atlas connected'))
   .catch(err => console.log('MongoDB connection error:', err));
 
