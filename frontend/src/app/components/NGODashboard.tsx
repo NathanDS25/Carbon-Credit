@@ -245,7 +245,6 @@ export function NGODashboard() {
             Download PDF Certificate
           </button>
         )}
-        </div>
       </div>
 
       {/* Upload Section */}

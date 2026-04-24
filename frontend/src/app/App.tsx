@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Building2, Leaf, Shield, LogOut, ChevronDown } from 'lucide-react';
+import { Building2, Leaf, Shield, LogOut } from 'lucide-react';
 import { NGODashboard } from './components/NGODashboard';
 import { CompanyDashboard } from './components/CompanyDashboard';
 import { AdminDashboard } from './components/AdminDashboard';
-import { WalletConnect } from './components/WalletConnect';
+import { WalletProvider } from './components/WalletProvider';
+import { ConnectWallet } from './components/ConnectWallet';
+import { LoginPage } from './components/LoginPage';
 
 type UserRole = 'ngo' | 'company' | 'admin';
 
@@ -62,16 +64,15 @@ export default function App() {
     <WalletProvider>
       <div className="min-h-screen bg-background">
 
-        {/* ── Top accent bar ────────────────────────── */}
+        {/* ── Top accent bar */}
         <div className={`h-1 w-full bg-gradient-to-r ${meta.gradient}`} />
 
-        {/* ── Header ───────────────────────────────── */}
+        {/* ── Header */}
         <header className="bg-card/90 backdrop-blur-md border-b border-border sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
 
             {/* Left — Logo + breadcrumb */}
             <div className="flex items-center gap-4">
-              {/* Platform logo */}
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                   <Leaf className="w-4 h-4 text-primary" />
@@ -81,7 +82,6 @@ export default function App() {
 
               <span className="text-border hidden sm:block">|</span>
 
-              {/* Role badge */}
               <div className="flex items-center gap-2.5">
                 <div className={`${meta.iconBg} p-1.5 rounded-lg`}>
                   <Icon className={`w-4 h-4 ${meta.iconColor}`} />
@@ -93,8 +93,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* Right — user info + signout */}
-            <div className="flex items-center gap-4">
+            {/* Right — wallet + user info + signout */}
+            <div className="flex items-center gap-3">
               <ConnectWallet />
               <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/60 border border-border">
                 <div
@@ -114,25 +114,12 @@ export default function App() {
               </button>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <WalletConnect />
-            <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Switch Dashboard
-          </button>
-          </div>
-        </div>
-      </header>
+        </header>
 
-        {/* ── Hero strip ───────────────────────────── */}
+        {/* ── Hero strip */}
         <div
           className="border-b border-border"
-          style={{
-            background: `linear-gradient(135deg, ${meta.accent}0d 0%, transparent 60%)`,
-          }}
+          style={{ background: `linear-gradient(135deg, ${meta.accent}0d 0%, transparent 60%)` }}
         >
           <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
             <div>
@@ -143,11 +130,7 @@ export default function App() {
             </div>
             <div
               className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium"
-              style={{
-                borderColor: `${meta.accent}40`,
-                background: `${meta.accent}10`,
-                color: meta.accent,
-              }}
+              style={{ borderColor: `${meta.accent}40`, background: `${meta.accent}10`, color: meta.accent }}
             >
               <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: meta.accent }} />
               {currentRole === 'ngo' ? 'Satellite Sync Active' : currentRole === 'company' ? 'Marketplace Live' : 'Platform Monitoring'}
@@ -155,7 +138,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* ── Main Content ──────────────────────────── */}
+        {/* ── Main Content */}
         <main className="max-w-7xl mx-auto px-6 py-8">
           {currentRole === 'ngo' && <NGODashboard />}
           {currentRole === 'company' && <CompanyDashboard />}
