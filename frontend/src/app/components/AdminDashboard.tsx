@@ -48,105 +48,57 @@ export function AdminDashboard() {
   return (
     <div className="space-y-6">
       {/* Tab Navigation */}
-      <div className="bg-card backdrop-blur-sm rounded-2xl p-2 border border-border shadow-sm inline-flex gap-2">
-        <button
-          onClick={() => setSelectedTab('overview')}
-          className={`px-6 py-2 rounded-xl transition-colors ${
-            selectedTab === 'overview'
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Overview
-        </button>
-        <button
-          onClick={() => setSelectedTab('blockchain')}
-          className={`px-6 py-2 rounded-xl transition-colors ${
-            selectedTab === 'blockchain'
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Blockchain
-        </button>
-        <button
-          onClick={() => setSelectedTab('verification')}
-          className={`px-6 py-2 rounded-xl transition-colors ${
-            selectedTab === 'verification'
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Verification
-        </button>
-        <button
-          onClick={() => setSelectedTab('trading')}
-          className={`px-6 py-2 rounded-xl transition-colors ${
-            selectedTab === 'trading'
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Trading
-        </button>
+      <div className="flex gap-1 p-1 bg-muted/60 rounded-xl border border-border w-fit">
+        {(['overview', 'blockchain', 'verification', 'trading'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setSelectedTab(t)}
+            className={`px-5 py-2 rounded-lg text-sm font-medium transition-all capitalize ${
+              selectedTab === t
+                ? 'bg-card text-foreground shadow-sm border border-border'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {t}
+          </button>
+        ))}
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-card backdrop-blur-sm rounded-2xl p-6 border border-border shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-muted-foreground text-sm">Total Companies</p>
-              <h3 className="mt-1">48</h3>
-            </div>
-            <div className="bg-primary/10 p-3 rounded-xl">
-              <Building2 className="w-6 h-6 text-primary" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-card backdrop-blur-sm rounded-2xl p-6 border border-border shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-muted-foreground text-sm">Total NGOs</p>
-              <h3 className="mt-1">32</h3>
-            </div>
-            <div className="bg-primary/10 p-3 rounded-xl">
-              <Leaf className="w-6 h-6 text-primary" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-card backdrop-blur-sm rounded-2xl p-6 border border-border shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-muted-foreground text-sm">Total Credits</p>
-              <h3 className="mt-1">284,500</h3>
-            </div>
-            <div className="bg-primary/10 p-3 rounded-xl">
-              <Activity className="w-6 h-6 text-primary" />
+        {[
+          { label: 'Total Companies', value: '48', icon: Building2, color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', sub: 'Registered buyers' },
+          { label: 'Total NGOs', value: '32', icon: Leaf, color: '#10b981', bg: 'rgba(16,185,129,0.1)', sub: 'Verified partners' },
+          { label: 'Total Credits', value: '284,500', icon: Activity, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', sub: 'Circulating supply' },
+          { label: 'Verified Projects', value: '156', icon: Shield, color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', sub: 'Satellite confirmed' },
+        ].map(({ label, value, icon: Icon, color, bg, sub }) => (
+          <div key={label}
+            className="bg-card rounded-2xl border border-border shadow-sm hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+            style={{ boxShadow: `0 0 0 1px ${color}20` }}
+          >
+            <div className="h-1 w-full" style={{ background: `linear-gradient(90deg, ${color}, ${color}80)` }} />
+            <div className="p-5 flex items-center justify-between">
+              <div>
+                <p className="text-muted-foreground text-xs uppercase tracking-wide font-medium">{label}</p>
+                <p className="text-3xl font-bold text-foreground mt-1">{value}</p>
+                <p className="text-xs text-muted-foreground mt-1">{sub}</p>
+              </div>
+              <div className="p-3 rounded-xl" style={{ background: bg }}>
+                <Icon className="w-6 h-6" style={{ color }} />
+              </div>
             </div>
           </div>
-        </div>
-
-        <div className="bg-card backdrop-blur-sm rounded-2xl p-6 border border-border shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-muted-foreground text-sm">Verified Projects</p>
-              <h3 className="mt-1">156</h3>
-            </div>
-            <div className="bg-primary/10 p-3 rounded-xl">
-              <Shield className="w-6 h-6 text-primary" />
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
 
       {selectedTab === 'overview' && (
         <div className="space-y-6">
           {/* Companies List */}
-          <div className="bg-card backdrop-blur-sm rounded-2xl p-6 border border-border shadow-sm">
-            <h3 className="mb-4">Registered Companies</h3>
+          <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+            <div className="h-0.5 w-full bg-gradient-to-r from-blue-400 to-indigo-500" />
+            <div className="p-6">
+            <h3 className="mb-1 text-base font-semibold">Registered Companies</h3>
+            <p className="text-xs text-muted-foreground mb-4">Corporate carbon credit buyers on the platform</p>
             <div className="space-y-3">
               {['GreenTech Industries', 'EcoLogistics Corp', 'SustainEnergy Ltd', 'CleanAir Solutions'].map((company, i) => (
                 <div key={i} className="flex items-center justify-between p-4 bg-accent/50 rounded-xl">
@@ -166,11 +118,15 @@ export function AdminDashboard() {
                 </div>
               ))}
             </div>
+            </div>
           </div>
 
           {/* NGOs List */}
-          <div className="bg-card backdrop-blur-sm rounded-2xl p-6 border border-border shadow-sm">
-            <h3 className="mb-4">Registered NGOs</h3>
+          <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+            <div className="h-0.5 w-full bg-gradient-to-r from-emerald-400 to-teal-500" />
+            <div className="p-6">
+            <h3 className="mb-1 text-base font-semibold">Registered NGOs</h3>
+            <p className="text-xs text-muted-foreground mb-4">Verified conservation organisations</p>
             <div className="space-y-3">
               {['Green Earth Foundation', 'TreePlant Initiative', 'Forest Guardians', 'Carbon Offset Alliance'].map((ngo, i) => (
                 <div key={i} className="flex items-center justify-between p-4 bg-accent/50 rounded-xl">
@@ -189,6 +145,7 @@ export function AdminDashboard() {
                   </button>
                 </div>
               ))}
+            </div>
             </div>
           </div>
         </div>
