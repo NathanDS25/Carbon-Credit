@@ -5,8 +5,9 @@ const multer = require('multer');
 const path = require('path');
 const { 
   verifyAndMint, getTradingData, handleAction,
-  getNGOs, getCompanies, getCreditRequests, createCreditRequest, getRegionalPrices
+  getNGOs, getCompanies, getCreditRequests, createCreditRequest, getRegionalPrices, getImages
 } = require('../controllers/carbonController');
+const PlantationImage = require('../models/PlantationImage');
 
 // Set up Multer for photo uploads
 const storage = multer.diskStorage({
@@ -22,11 +23,25 @@ const upload = multer({ storage: storage });
 // Core minting
 router.post('/mint', verifyAndMint);
 
-// Image upload
-router.post('/upload', upload.single('image'), (req, res) => {
+// Image upload — saves file and records in MongoDB
+router.post('/upload', upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No image provided" });
-  res.json({ success: true, filePath: `/uploads/${req.file.filename}` });
+  const filePath = `/uploads/${req.file.filename}`;
+  try {
+    await PlantationImage.create({
+      filename: req.file.filename,
+      filePath,
+      originalName: req.file.originalname,
+      ngoWallet: req.body.ngoWallet || '',
+      location: req.body.location || '',
+      notes: req.body.notes || '',
+    });
+  } catch (e) { console.error('Image DB save failed:', e.message); }
+  res.json({ success: true, filePath });
 });
+
+// List uploaded images
+router.get('/images', getImages);
 
 // Dynamic data endpoints
 router.get('/trading-data', getTradingData);

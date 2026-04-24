@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Upload, Calendar, MessageCircle, TrendingUp, Leaf, BarChart3, Loader2, Download } from 'lucide-react';
-import { verifyAndMintCredits, uploadImage, triggerAction, fetchCompanies } from '../api/carbonApi';
+import { Upload, Calendar, MessageCircle, TrendingUp, Leaf, BarChart3, Loader2, Download, Satellite, ZoomIn } from 'lucide-react';
+import { verifyAndMintCredits, uploadImage, triggerAction, fetchCompanies, fetchImages } from '../api/carbonApi';
 import jsPDF from 'jspdf';
 import { TradingDashboard } from './TradingDashboard';
 import { ScheduleMeetModal } from './ScheduleMeetModal';
@@ -28,16 +28,20 @@ export function NGODashboard() {
     isOpen: false,
     companyName: '',
   });
-
   const [landArea, setLandArea] = useState<string>('');
   const [isAuditing, setIsAuditing] = useState(false);
   const [auditResult, setAuditResult] = useState<{ ndviScore: number; creditsMinted: number; etherscanLink: string; error?: string } | null>(null);
+  const [uploadedImages, setUploadedImages] = useState<{ filePath: string; originalName: string; createdAt: string }[]>([]);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
+  const loadImages = () => fetchImages().then(setUploadedImages);
 
   useEffect(() => {
     fetchCompanies()
       .then((data: Company[]) => setCompanies(data))
       .catch(() => setCompanies([]))
       .finally(() => setIsLoadingCompanies(false));
+    loadImages();
   }, []);
 
   const handleSatelliteAudit = async () => {
@@ -92,7 +96,7 @@ export function NGODashboard() {
       setIsUploading(true);
       try {
         await uploadImage(file);
-        alert('Image uploaded successfully to the backend!');
+        await loadImages(); // reload gallery from backend
       } catch (err: any) {
         alert('Failed to upload image: ' + err.message);
       } finally {
@@ -305,24 +309,60 @@ export function NGODashboard() {
         </div>
       </div>
 
-      {/* Recent Uploads Gallery */}
+      {/* Plantation Image Gallery — real uploads from backend */}
       <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300">
         <div className="h-0.5 w-full bg-gradient-to-r from-teal-400 to-emerald-500" />
         <div className="p-6">
-          <h3 className="mb-1 text-base font-semibold">Recent Plantation Images</h3>
-          <p className="text-xs text-muted-foreground mb-4">Visual record of registered land parcels</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="aspect-square bg-muted rounded-xl overflow-hidden">
-                <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                  <Leaf className="w-12 h-12 text-primary/40" />
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="mb-1 text-base font-semibold">Plantation Image Gallery</h3>
+              <p className="text-xs text-muted-foreground">{uploadedImages.length} image{uploadedImages.length !== 1 ? 's' : ''} uploaded · click to enlarge</p>
+            </div>
+            <button onClick={loadImages} className="text-xs text-primary hover:underline">Refresh</button>
           </div>
+
+          {uploadedImages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              <Leaf className="w-12 h-12 mb-3 opacity-20" />
+              <p className="text-sm">No images uploaded yet.</p>
+              <p className="text-xs mt-1">Upload plantation photos above to see them here.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {uploadedImages.map((img, i) => (
+                <div key={i}
+                  className="aspect-square rounded-xl overflow-hidden cursor-pointer relative group border border-border"
+                  onClick={() => setLightboxSrc(`http://localhost:5000${img.filePath}`)}
+                >
+                  <img
+                    src={`http://localhost:5000${img.filePath}`}
+                    alt={img.originalName}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+                    <ZoomIn className="w-6 h-6 text-white" />
+                    <span className="text-white text-xs font-medium px-2 text-center truncate max-w-full">{img.originalName}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
         </>
+      )}
+
+      {/* Lightbox */}
+      {lightboxSrc && (
+        <div
+          onClick={() => setLightboxSrc(null)}
+          style={{ position:'fixed', inset:0, zIndex:1000, background:'rgba(0,0,0,0.92)',
+            display:'flex', alignItems:'center', justifyContent:'center', cursor:'zoom-out' }}>
+          <img src={lightboxSrc} alt="full"
+            style={{ maxWidth:'90vw', maxHeight:'90vh', borderRadius:'12px',
+              boxShadow:'0 20px 80px rgba(0,0,0,0.8)', objectFit:'contain' }} />
+          <span style={{ position:'absolute', top:20, right:28, color:'#fff', fontSize:28, cursor:'pointer' }}>✕</span>
+        </div>
       )}
 
       {/* Schedule Meet Modal */}

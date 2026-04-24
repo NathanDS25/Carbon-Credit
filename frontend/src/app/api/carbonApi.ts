@@ -86,3 +86,12 @@ export const fetchRegionalPrices = async () => {
     throw error.response?.data || { error: "Failed to fetch regional prices." };
   }
 };
+
+export const fetchImages = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/carbon/images`);
+    return response.data;
+  } catch (error: any) {
+    return [];
+  }
+};

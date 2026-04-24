@@ -5,6 +5,7 @@ const User = require('../models/user');
 const CreditRequest = require('../models/CreditRequest');
 const Trade = require('../models/Trade');
 const ActionLog = require('../models/ActionLog');
+const PlantationImage = require('../models/PlantationImage');
 
 // POST /api/carbon/mint
 const verifyAndMint = async (req, res) => {
@@ -189,6 +190,16 @@ const getRegionalPrices = async (req, res) => {
     }
 };
 
-module.exports = { verifyAndMint, getTradingData, handleAction, getNGOs, getCompanies, getCreditRequests, createCreditRequest, getRegionalPrices };
+// GET /api/carbon/images — list uploaded plantation images
+const getImages = async (req, res) => {
+    try {
+        const images = await PlantationImage.find().sort({ createdAt: -1 }).limit(20).lean();
+        res.status(200).json(images);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+module.exports = { verifyAndMint, getTradingData, handleAction, getNGOs, getCompanies, getCreditRequests, createCreditRequest, getRegionalPrices, getImages };
 
 
