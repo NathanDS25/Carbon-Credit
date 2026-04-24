@@ -1,344 +1,330 @@
 'use client';
 import { useState, useEffect } from 'react';
-import {
-  AreaChart, Area, BarChart, Bar, LineChart, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
-} from 'recharts';
-import {
-  TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
-  DollarSign, Activity, Globe, Leaf, BarChart2, RefreshCw
-} from 'lucide-react';
+import { ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ErrorBar, Cell, Legend, BarChart } from 'recharts';
+import { TrendingUp, TrendingDown, Activity, Globe, RefreshCw, DollarSign } from 'lucide-react';
 import axios from 'axios';
 
 const API = 'http://localhost:5000/api';
 
-// Average carbon credit price history (global benchmark)
-const globalPriceHistory = [
-  { month: 'Nov', avgPrice: 12.4, high: 14.2, low: 10.8 },
-  { month: 'Dec', avgPrice: 13.1, high: 15.0, low: 11.5 },
-  { month: 'Jan', avgPrice: 14.8, high: 16.5, low: 13.0 },
-  { month: 'Feb', avgPrice: 15.2, high: 17.1, low: 13.8 },
-  { month: 'Mar', avgPrice: 16.0, high: 18.2, low: 14.5 },
-  { month: 'Apr', avgPrice: 17.3, high: 19.5, low: 15.8 },
+// ── Tier config ─────────────────────────────────────────────────────────────
+const TIERS = {
+  Platinum: { color:'#e2e8f0', bg:'rgba(226,232,240,0.08)', border:'rgba(226,232,240,0.25)', emoji:'💎', avgPrice:23.5, range:[22,25] as [number,number] },
+  Gold:     { color:'#fbbf24', bg:'rgba(251,191,36,0.08)',  border:'rgba(251,191,36,0.25)',  emoji:'🥇', avgPrice:19.1, range:[17,21] as [number,number] },
+  Silver:   { color:'#94a3b8', bg:'rgba(148,163,184,0.08)', border:'rgba(148,163,184,0.25)', emoji:'🥈', avgPrice:14.0, range:[13,16] as [number,number] },
+  Bronze:   { color:'#c2713c', bg:'rgba(194,113,60,0.08)',  border:'rgba(194,113,60,0.25)',  emoji:'🥉', avgPrice:9.8,  range:[8,12]  as [number,number] },
+};
+
+// ── Candlestick data (6-month OHLC) ─────────────────────────────────────────
+const CANDLE_DATA = [
+  { month:'Nov', open:12.2, close:13.8, high:14.5, low:11.8 },
+  { month:'Dec', open:13.8, close:15.1, high:15.8, low:13.2 },
+  { month:'Jan', open:15.1, close:14.4, high:16.2, low:13.9 },
+  { month:'Feb', open:14.4, close:16.8, high:17.5, low:14.0 },
+  { month:'Mar', open:16.8, close:18.2, high:19.1, low:16.2 },
+  { month:'Apr', open:18.2, close:17.3, high:19.5, low:16.8 },
 ];
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
+// ── Custom Candlestick bar ───────────────────────────────────────────────────
+const CandleBar = (props: any) => {
+  const { x, y, width, height, open, close, high, low, chartBottom, yScale } = props;
+  if (!yScale) return null;
+  const bullish = close >= open;
+  const color = bullish ? '#10b981' : '#ef4444';
+  const bodyTop = Math.min(yScale(open), yScale(close));
+  const bodyH   = Math.abs(yScale(open) - yScale(close)) || 2;
+  const cx = x + width / 2;
   return (
-    <div style={{
-      background: 'rgba(10,20,15,0.98)',
-      border: '1px solid rgba(82,183,136,0.3)',
-      borderRadius: '12px', padding: '12px 16px',
-      backdropFilter: 'blur(20px)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
-    }}>
-      <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '6px' }}>{label}</div>
-      {payload.map((p: any, i: number) => (
-        <div key={i} style={{ color: p.color, fontSize: '13px', fontWeight: '600' }}>
-          {p.name}: <span style={{ color: '#e2e8f0' }}>${typeof p.value === 'number' ? p.value.toFixed(2) : p.value}</span>
+    <g>
+      {/* Wick */}
+      <line x1={cx} y1={yScale(high)} x2={cx} y2={yScale(low)} stroke={color} strokeWidth={1.5} />
+      {/* Body */}
+      <rect x={x + 4} y={bodyTop} width={width - 8} height={bodyH}
+        fill={bullish ? color : color} fillOpacity={bullish ? 0.85 : 0.7}
+        rx={2} stroke={color} strokeWidth={0.5} />
+    </g>
+  );
+};
+
+// ── Custom tooltip ───────────────────────────────────────────────────────────
+const CandleTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  const d = payload[0]?.payload;
+  const bullish = d.close >= d.open;
+  return (
+    <div style={{ background:'rgba(4,10,6,0.98)', border:'1px solid rgba(82,183,136,0.3)',
+      borderRadius:'12px', padding:'12px 16px', backdropFilter:'blur(20px)',
+      boxShadow:'0 10px 40px rgba(0,0,0,0.6)' }}>
+      <div style={{ color:'#94a3b8', fontSize:'12px', marginBottom:'8px', fontWeight:'700' }}>{label}</div>
+      {[['Open','open','#60a5fa'],['High','high','#10b981'],['Low','low','#ef4444'],['Close','close', bullish?'#10b981':'#ef4444']].map(([lbl,key,clr])=>(
+        <div key={lbl} style={{ display:'flex', justifyContent:'space-between', gap:'20px', fontSize:'12px', marginBottom:'3px' }}>
+          <span style={{ color:'#64748b' }}>{lbl}</span>
+          <span style={{ color:clr, fontWeight:'700' }}>${(d[key as string] as number).toFixed(2)}</span>
         </div>
       ))}
+      <div style={{ borderTop:'1px solid rgba(255,255,255,0.06)', marginTop:'8px', paddingTop:'6px',
+        display:'flex', justifyContent:'space-between', fontSize:'12px' }}>
+        <span style={{ color:'#64748b' }}>Change</span>
+        <span style={{ color: bullish?'#10b981':'#ef4444', fontWeight:'700' }}>
+          {bullish?'+':''}{(d.close-d.open).toFixed(2)} ({((d.close-d.open)/d.open*100).toFixed(1)}%)
+        </span>
+      </div>
     </div>
   );
 };
 
-const StatCard = ({ label, value, sub, icon, color, trend }: any) => (
-  <div style={{
-    background: 'linear-gradient(135deg, rgba(10,20,15,0.95), rgba(15,30,20,0.9))',
-    border: '1px solid rgba(82,183,136,0.15)',
-    borderRadius: '18px', padding: '20px',
-    backdropFilter: 'blur(20px)',
-    transition: 'all 0.3s ease',
-    cursor: 'default',
-  }}
-    onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-4px)', e.currentTarget.style.boxShadow = '0 12px 40px rgba(45,134,89,0.25)')}
-    onMouseLeave={e => (e.currentTarget.style.transform = 'none', e.currentTarget.style.boxShadow = 'none')}
-  >
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-      <div style={{ color: '#94a3b8', fontSize: '13px' }}>{label}</div>
-      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: `${color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', color }}>
-        {icon}
-      </div>
+// ── Chart that draws candles using composedChart bars ────────────────────────
+function CandlestickChart({ data }: { data: typeof CANDLE_DATA }) {
+  // Transform data for ComposedChart: use stacked bars to simulate candle body
+  // low → bodyBottom (transparent), bodyBottom → body (colored), rest transparent
+  const transformed = data.map(d => {
+    const bullish = d.close >= d.open;
+    const bodyBottom = Math.min(d.open, d.close);
+    const bodyTop    = Math.max(d.open, d.close);
+    return {
+      ...d,
+      bullish,
+      gap:      bodyBottom - d.low,
+      body:     bodyTop - bodyBottom || 0.1,
+      topGap:   d.high - bodyTop,
+      lowBase:  d.low,
+    };
+  });
+
+  const CustomTick = ({ x, y, payload }: any) => (
+    <text x={x} y={y+12} textAnchor="middle" fill="#64748b" fontSize={12}>{payload.value}</text>
+  );
+
+  return (
+    <ResponsiveContainer width="100%" height={280}>
+      <ComposedChart data={transformed} barCategoryGap="25%" margin={{ top:20, right:10, bottom:5, left:10 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(82,183,136,0.07)" vertical={false} />
+        <XAxis dataKey="month" tick={<CustomTick/>} axisLine={false} tickLine={false} />
+        <YAxis domain={['auto','auto']} tick={{ fill:'#64748b', fontSize:11 }}
+          axisLine={false} tickLine={false} tickFormatter={v=>`$${v}`} width={45} />
+        <Tooltip content={<CandleTooltip />} cursor={{ fill:'rgba(82,183,136,0.05)' }} />
+
+        {/* Transparent base (low) */}
+        <Bar dataKey="lowBase" stackId="candle" fill="transparent" stroke="none" />
+        {/* Gap below body */}
+        <Bar dataKey="gap" stackId="candle" fill="transparent" stroke="none"
+          shape={(props: any) => {
+            const d = props.data?.[props.index] || transformed[props.index];
+            const color = d?.bullish ? '#10b981' : '#ef4444';
+            const cx = props.x + props.width/2;
+            return <line x1={cx} y1={props.y} x2={cx} y2={props.y+props.height} stroke={color} strokeWidth={2}/>;
+          }} />
+        {/* Candle body */}
+        <Bar dataKey="body" stackId="candle" radius={[2,2,2,2]}
+          shape={(props: any) => {
+            const d = transformed[props.index];
+            const color = d?.bullish ? '#10b981' : '#ef4444';
+            return <rect x={props.x+4} y={props.y} width={props.width-8} height={Math.max(props.height,2)}
+              fill={color} fillOpacity={0.85} rx={2} stroke={color} strokeWidth={0.5}/>;
+          }}>
+          {transformed.map((d,i) => <Cell key={i} fill={d.bullish?'#10b981':'#ef4444'} />)}
+        </Bar>
+        {/* Top gap (wick above body) */}
+        <Bar dataKey="topGap" stackId="candle" fill="transparent" stroke="none"
+          shape={(props: any) => {
+            const d = transformed[props.index];
+            const color = d?.bullish ? '#10b981' : '#ef4444';
+            const cx = props.x + props.width/2;
+            return <line x1={cx} y1={props.y} x2={cx} y2={props.y+props.height} stroke={color} strokeWidth={2}/>;
+          }} />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
+
+// ── Regional bar chart ───────────────────────────────────────────────────────
+const REGIONAL = [
+  { region:'Western Ghats', price:18.5, tier:'Gold' },
+  { region:'Northeast India', price:21.8, tier:'Platinum' },
+  { region:'Nilgiris', price:22.7, tier:'Platinum' },
+  { region:'Himalayan Belt', price:14.6, tier:'Silver' },
+  { region:'Sundarbans', price:16.8, tier:'Gold' },
+  { region:'Rajasthan', price:9.4,  tier:'Bronze' },
+];
+
+// ── Stat Card ────────────────────────────────────────────────────────────────
+const StatCard = ({ label, value, sub, icon, color }: any) => (
+  <div style={{ background:'rgba(6,14,9,0.9)', border:'1px solid rgba(82,183,136,0.12)',
+    borderRadius:'16px', padding:'18px 20px', backdropFilter:'blur(12px)', transition:'all 0.3s' }}
+    onMouseEnter={e=>(e.currentTarget.style.transform='translateY(-3px)',e.currentTarget.style.boxShadow=`0 10px 30px ${color}22`)}
+    onMouseLeave={e=>(e.currentTarget.style.transform='none',e.currentTarget.style.boxShadow='none')}>
+    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'10px' }}>
+      <span style={{ color:'#64748b', fontSize:'12px' }}>{label}</span>
+      <div style={{ width:'30px', height:'30px', borderRadius:'8px', background:`${color}18`,
+        display:'flex', alignItems:'center', justifyContent:'center', color }}>{icon}</div>
     </div>
-    <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700', marginBottom: '6px' }}>{value}</div>
-    {trend && (
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px',
-        color: trend.startsWith('+') ? '#10b981' : '#ef4444',
-      }}>
-        {trend.startsWith('+') ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
-        {trend} <span style={{ color: '#475569', marginLeft: '4px' }}>{sub}</span>
-      </div>
-    )}
-    {!trend && sub && <div style={{ color: '#64748b', fontSize: '12px' }}>{sub}</div>}
+    <div style={{ color:'#f1f5f9', fontSize:'22px', fontWeight:'700', marginBottom:'4px' }}>{value}</div>
+    {sub && <div style={{ color:'#475569', fontSize:'11px' }}>{sub}</div>}
   </div>
 );
 
-const SectionCard = ({ title, children, rightSlot }: any) => (
-  <div style={{
-    background: 'linear-gradient(135deg, rgba(10,20,15,0.95), rgba(15,30,20,0.9))',
-    border: '1px solid rgba(82,183,136,0.15)',
-    borderRadius: '20px', padding: '24px',
-    backdropFilter: 'blur(20px)',
-  }}>
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-      <h3 style={{ color: '#e2e8f0', fontSize: '15px', fontWeight: '700', margin: 0 }}>{title}</h3>
-      {rightSlot}
+// ── Section wrapper ──────────────────────────────────────────────────────────
+const Card = ({ title, children, right }: any) => (
+  <div style={{ background:'rgba(6,14,9,0.9)', border:'1px solid rgba(82,183,136,0.12)',
+    borderRadius:'18px', padding:'22px', backdropFilter:'blur(12px)' }}>
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'18px' }}>
+      <h3 style={{ color:'#e2e8f0', fontSize:'14px', fontWeight:'700', margin:0 }}>{title}</h3>
+      {right}
     </div>
     {children}
   </div>
 );
 
+// ── Main ─────────────────────────────────────────────────────────────────────
 export function TradingDashboard() {
   const [tradingData, setTradingData] = useState<any>(null);
-  const [regionalPrices, setRegionalPrices] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activePeriod, setActivePeriod] = useState('1D');
+  const [period, setPeriod] = useState('6M');
 
-  const loadData = async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
+  const load = async (r=false) => {
+    if(r) setRefreshing(true);
     try {
-      const [trading, regional] = await Promise.all([
-        axios.get(`${API}/carbon/trading-data`).then(r => r.data).catch(() => null),
-        axios.get(`${API}/carbon/regional-prices`).then(r => r.data).catch(() => []),
-      ]);
-      setTradingData(trading);
-      setRegionalPrices(regional);
-    } catch {
-      // handled per-request
-    } finally {
-      setIsLoading(false);
-      setRefreshing(false);
-    }
+      const res = await axios.get(`${API}/carbon/trading-data`).then(r=>r.data).catch(()=>null);
+      setTradingData(res);
+    } finally { setLoading(false); setRefreshing(false); }
   };
-
-  useEffect(() => { loadData(); }, []);
-
-  // Ticker data (live-feeling price display)
-  const tickers = [
-    { symbol: 'CCT', name: 'Carbon Credit Token', price: tradingData?.currentPrice ?? '---', change: '+2.4%', up: true },
-    { symbol: 'VCU', name: 'Verified Carbon Unit', price: '18.50', change: '+1.2%', up: true },
-    { symbol: 'CER', name: 'Certified Emission', price: '21.80', change: '-0.8%', up: false },
-    { symbol: 'REC', name: 'Renewable Energy Cert', price: '9.20', change: '+3.1%', up: true },
-  ];
-
-  // Regional chart data (bar chart)
-  const regionalChartData = regionalPrices.map(r => ({
-    region: r.region.split(',')[0],
-    price: r.price,
-    volume: Math.round(r.volume / 1000),
-    ndvi: r.ndviAvg,
-  }));
-
-  if (isLoading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: '48px', height: '48px', borderRadius: '50%',
-            border: '3px solid rgba(82,183,136,0.2)',
-            borderTopColor: '#52b788',
-            animation: 'spin 0.8s linear infinite',
-            margin: '0 auto 16px',
-          }} />
-          <div style={{ color: '#52b788', fontSize: '14px' }}>Loading market data...</div>
-        </div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
+  useEffect(()=>{ load(); },[]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display:'flex', flexDirection:'column', gap:'18px' }}>
 
-      {/* Ticker Strip */}
-      <div style={{
-        background: 'rgba(10,20,15,0.8)',
-        border: '1px solid rgba(82,183,136,0.15)',
-        borderRadius: '14px', padding: '14px 20px',
-        display: 'flex', gap: '32px', overflowX: 'auto',
-        backdropFilter: 'blur(10px)',
-      }}>
-        {tickers.map((t, i) => (
-          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 'max-content' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: '#e2e8f0', fontWeight: '700', fontSize: '14px' }}>{t.symbol}</span>
-              <span style={{
-                padding: '1px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: '600',
-                background: t.up ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
-                color: t.up ? '#10b981' : '#ef4444',
-              }}>{t.change}</span>
+      {/* ── Tier avg price cards ── */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px' }}>
+        {(Object.entries(TIERS) as [string, typeof TIERS[keyof typeof TIERS]][]).map(([tier,cfg])=>(
+          <div key={tier} style={{ padding:'16px 18px', borderRadius:'16px',
+            background: cfg.bg, border:`1px solid ${cfg.border}`,
+            backdropFilter:'blur(12px)', transition:'all 0.25s' }}
+            onMouseEnter={e=>(e.currentTarget.style.transform='translateY(-3px)', e.currentTarget.style.boxShadow=`0 10px 28px ${cfg.border}`)}
+            onMouseLeave={e=>(e.currentTarget.style.transform='none', e.currentTarget.style.boxShadow='none')}>
+            <div style={{ color:cfg.color, fontWeight:'800', fontSize:'12px', marginBottom:'6px' }}>
+              {cfg.emoji} {tier}
             </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-              <span style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: '700' }}>${t.price}</span>
-              <span style={{ color: '#64748b', fontSize: '11px' }}>{t.name}</span>
+            <div style={{ color:'#f1f5f9', fontSize:'24px', fontWeight:'800' }}>${cfg.avgPrice}</div>
+            <div style={{ color:'#475569', fontSize:'11px', marginTop:'2px' }}>
+              avg · ${cfg.range[0]}–${cfg.range[1]}/tonne
             </div>
           </div>
         ))}
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
-          <button
-            onClick={() => loadData(true)}
-            style={{
-              background: 'none', border: '1px solid rgba(82,183,136,0.2)',
-              borderRadius: '8px', padding: '6px 10px',
-              color: '#52b788', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
-              fontSize: '12px',
-            }}
-          >
-            <RefreshCw size={13} style={{ animation: refreshing ? 'spin 0.8s linear infinite' : 'none' }} />
-            Refresh
-          </button>
-        </div>
       </div>
 
-      {/* Stat Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-        <StatCard label="Current CCT Price" value={`$${tradingData?.currentPrice ?? '---'}`} trend="+2.4%" sub="vs yesterday" icon={<DollarSign size={16} />} color="#10b981" />
-        <StatCard label="24h Volume" value={tradingData?.volume24h?.toLocaleString() ?? '---'} sub="Credits traded today" icon={<Activity size={16} />} color="#60a5fa" />
-        <StatCard label="Avg Market Price" value="$17.30" trend="+5.8%" sub="this month" icon={<TrendingUp size={16} />} color="#f59e0b" />
-        <StatCard label="Active Regions" value={`${regionalPrices.length}`} sub="Verified ecosystems" icon={<Globe size={16} />} color="#a78bfa" />
+      {/* ── Stats row ── */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px' }}>
+        <StatCard label="Market Price (CCT)" value={`$${tradingData?.currentPrice??'---'}`}
+          sub="Carbon Credit Token" icon={<DollarSign size={14}/>} color="#10b981" />
+        <StatCard label="24h Volume" value={tradingData?.volume24h?.toLocaleString()??'---'}
+          sub="Credits traded" icon={<Activity size={14}/>} color="#60a5fa" />
+        <StatCard label="Platinum Avg" value="$23.50" sub="+4.2% this month"
+          icon={<TrendingUp size={14}/>} color="#e2e8f0" />
+        <StatCard label="Active Regions" value="12" sub="Verified ecosystems"
+          icon={<Globe size={14}/>} color="#a78bfa" />
       </div>
 
-      {/* Average Price History Chart */}
-      <SectionCard
-        title="Global Average Carbon Credit Price (USD/tonne)"
-        rightSlot={
-          <div style={{ display: 'flex', gap: '6px' }}>
-            {['1D', '1W', '1M', '6M', 'ALL'].map(p => (
-              <button key={p} onClick={() => setActivePeriod(p)} style={{
-                padding: '4px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '600',
-                background: activePeriod === p ? 'rgba(82,183,136,0.3)' : 'transparent',
-                border: `1px solid ${activePeriod === p ? 'rgba(82,183,136,0.5)' : 'rgba(255,255,255,0.08)'}`,
-                color: activePeriod === p ? '#52b788' : '#64748b',
-                cursor: 'pointer', transition: 'all 0.2s',
+      {/* ── Candlestick Chart ── */}
+      <Card title="Carbon Credit Market — Monthly OHLC (Candlestick)"
+        right={
+          <div style={{ display:'flex', gap:'5px', alignItems:'center' }}>
+            <button onClick={()=>load(true)} style={{ background:'none', border:'1px solid rgba(82,183,136,0.2)',
+              borderRadius:'7px', padding:'5px 9px', color:'#52b788', cursor:'pointer',
+              display:'flex', alignItems:'center', gap:'5px', fontSize:'11px' }}>
+              <RefreshCw size={11} style={{ animation:refreshing?'spin 0.8s linear infinite':'none' }} /> Refresh
+            </button>
+            {['1M','3M','6M','1Y'].map(p=>(
+              <button key={p} onClick={()=>setPeriod(p)} style={{
+                padding:'4px 10px', borderRadius:'7px', fontSize:'11px', fontWeight:'600',
+                background: period===p ? 'rgba(82,183,136,0.2)' : 'transparent',
+                border:`1px solid ${period===p ? 'rgba(82,183,136,0.5)' : 'rgba(255,255,255,0.07)'}`,
+                color: period===p ? '#52b788' : '#475569', cursor:'pointer', transition:'all 0.15s'
               }}>{p}</button>
             ))}
           </div>
-        }
-      >
-        <ResponsiveContainer width="100%" height={260}>
-          <AreaChart data={globalPriceHistory}>
-            <defs>
-              <linearGradient id="priceGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#2d8659" stopOpacity={0.4} />
-                <stop offset="95%" stopColor="#2d8659" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="highGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(82,183,136,0.08)" />
-            <XAxis dataKey="month" stroke="#475569" style={{ fontSize: '12px' }} />
-            <YAxis stroke="#475569" style={{ fontSize: '12px' }} tickFormatter={v => `$${v}`} domain={['auto', 'auto']} />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend wrapperStyle={{ fontSize: '12px', color: '#94a3b8' }} />
-            <Area type="monotone" dataKey="high" name="High" stroke="#10b981" strokeWidth={1} strokeDasharray="4 4" fill="url(#highGrad)" />
-            <Area type="monotone" dataKey="avgPrice" name="Avg Price" stroke="#52b788" strokeWidth={2.5} fill="url(#priceGrad)" />
-            <Area type="monotone" dataKey="low" name="Low" stroke="#ef4444" strokeWidth={1} strokeDasharray="4 4" fill="none" />
-          </AreaChart>
-        </ResponsiveContainer>
-      </SectionCard>
-
-      {/* Regional Prices */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-
-        {/* Regional Price Bar Chart */}
-        <SectionCard title="Carbon Credit Prices by Region (USD/tonne)">
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={regionalChartData} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(82,183,136,0.08)" horizontal={false} />
-              <XAxis type="number" stroke="#475569" style={{ fontSize: '11px' }} tickFormatter={v => `$${v}`} />
-              <YAxis type="category" dataKey="region" stroke="#475569" style={{ fontSize: '10px' }} width={110} />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="price" name="Price" fill="#2d8659" radius={[0, 6, 6, 0]}
-                background={{ fill: 'rgba(255,255,255,0.02)', radius: 6 }} />
-            </BarChart>
-          </ResponsiveContainer>
-        </SectionCard>
-
-        {/* Regional Prices Table */}
-        <SectionCard title="Regional Market Overview">
-          <div style={{ overflowY: 'auto', maxHeight: '260px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(82,183,136,0.15)' }}>
-                  {['Region', 'Price', 'Trend', 'NDVI'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '8px 10px', color: '#64748b', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {regionalPrices.map((r, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.2s' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(82,183,136,0.05)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                    <td style={{ padding: '10px 10px', fontSize: '12px' }}>
-                      <div style={{ color: '#e2e8f0', fontWeight: '600' }}>{r.region.split(',')[0]}</div>
-                      <div style={{ color: '#475569', fontSize: '11px' }}>{r.type}</div>
-                    </td>
-                    <td style={{ padding: '10px', color: '#52b788', fontWeight: '700', fontSize: '13px' }}>${r.price}</td>
-                    <td style={{ padding: '10px' }}>
-                      <span style={{
-                        padding: '2px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: '600',
-                        background: r.trend.startsWith('+') ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
-                        color: r.trend.startsWith('+') ? '#10b981' : '#ef4444',
-                      }}>{r.trend}</span>
-                    </td>
-                    <td style={{ padding: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <div style={{ flex: 1, height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)' }}>
-                          <div style={{ width: `${r.ndviAvg * 100}%`, height: '100%', borderRadius: '3px', background: r.ndviAvg > 0.6 ? '#10b981' : r.ndviAvg > 0.4 ? '#f59e0b' : '#ef4444' }} />
-                        </div>
-                        <span style={{ color: '#94a3b8', fontSize: '11px', minWidth: '32px' }}>{r.ndviAvg}</span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        }>
+        {/* Legend */}
+        <div style={{ display:'flex', gap:'16px', marginBottom:'14px' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+            <div style={{ width:'12px', height:'12px', borderRadius:'2px', background:'#10b981' }}/>
+            <span style={{ color:'#64748b', fontSize:'11px' }}>Bullish (close ≥ open)</span>
           </div>
-        </SectionCard>
+          <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+            <div style={{ width:'12px', height:'12px', borderRadius:'2px', background:'#ef4444' }}/>
+            <span style={{ color:'#64748b', fontSize:'11px' }}>Bearish (close &lt; open)</span>
+          </div>
+        </div>
+        <CandlestickChart data={CANDLE_DATA} />
+      </Card>
+
+      {/* ── Regional prices + Trades ── */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'18px' }}>
+
+        <Card title="Regional Carbon Credit Prices (India)">
+          <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+            {REGIONAL.map((r,i)=>{
+              const cfg = TIERS[r.tier as keyof typeof TIERS];
+              return (
+                <div key={i} style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
+                  padding:'10px 12px', borderRadius:'10px',
+                  background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.05)',
+                  transition:'background 0.15s' }}
+                  onMouseEnter={e=>(e.currentTarget.style.background='rgba(82,183,136,0.05)')}
+                  onMouseLeave={e=>(e.currentTarget.style.background='rgba(255,255,255,0.02)')}>
+                  <div>
+                    <div style={{ color:'#e2e8f0', fontSize:'13px', fontWeight:'600' }}>{r.region}</div>
+                    <span style={{ padding:'1px 8px', borderRadius:'20px', fontSize:'10px', fontWeight:'700',
+                      background:cfg.bg, color:cfg.color, border:`1px solid ${cfg.border}` }}>
+                      {cfg.emoji} {r.tier}
+                    </span>
+                  </div>
+                  <div style={{ textAlign:'right' }}>
+                    <div style={{ color:'#52b788', fontWeight:'700', fontSize:'15px' }}>${r.price}</div>
+                    <div style={{ color:'#475569', fontSize:'11px' }}>per tonne CO₂</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+        <Card title="Recent Blockchain Trades">
+          {tradingData?.recentTrades?.length > 0 ? (
+            <div style={{ overflowY:'auto', maxHeight:'280px' }}>
+              <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom:'1px solid rgba(82,183,136,0.12)' }}>
+                    {['Time','Seller','Credits','Price','Total'].map(h=>(
+                      <th key={h} style={{ textAlign:'left', padding:'8px 10px',
+                        color:'#475569', fontSize:'10px', fontWeight:'600', textTransform:'uppercase' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tradingData.recentTrades.map((t:any,i:number)=>(
+                    <tr key={i} style={{ borderBottom:'1px solid rgba(255,255,255,0.04)', transition:'background 0.15s' }}
+                      onMouseEnter={e=>(e.currentTarget.style.background='rgba(82,183,136,0.05)')}
+                      onMouseLeave={e=>(e.currentTarget.style.background='transparent')}>
+                      <td style={{ padding:'10px', color:'#64748b', fontSize:'12px' }}>{t.time}</td>
+                      <td style={{ padding:'10px', color:'#94a3b8', fontSize:'12px', fontFamily:'monospace' }}>{t.seller}</td>
+                      <td style={{ padding:'10px', color:'#52b788', fontWeight:'700', fontSize:'12px' }}>{t.credits?.toLocaleString()}</td>
+                      <td style={{ padding:'10px', color:'#f1f5f9', fontWeight:'600', fontSize:'12px' }}>${t.price}</td>
+                      <td style={{ padding:'10px', color:'#f59e0b', fontWeight:'600', fontSize:'12px' }}>${(t.credits*t.price)?.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div style={{ textAlign:'center', padding:'40px', color:'#475569' }}>
+              <Activity size={28} style={{ margin:'0 auto 10px', opacity:0.3 }}/>
+              <div style={{ fontSize:'13px' }}>No trades yet.</div>
+              <div style={{ fontSize:'11px', marginTop:'4px' }}>Trades appear after a satellite mint.</div>
+            </div>
+          )}
+        </Card>
       </div>
-
-      {/* Live Trades Table */}
-      <SectionCard title="Recent Blockchain Trades">
-        {tradingData?.recentTrades?.length > 0 ? (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(82,183,136,0.15)' }}>
-                  {['Time', 'Buyer', 'Seller', 'Credits', 'Price (USD)', 'Total'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '10px 12px', color: '#64748b', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {tradingData.recentTrades.map((trade: any, i: number) => (
-                  <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.2s' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(82,183,136,0.05)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                    <td style={{ padding: '12px', color: '#94a3b8', fontSize: '13px' }}>{trade.time}</td>
-                    <td style={{ padding: '12px', color: '#e2e8f0', fontSize: '13px', fontFamily: 'monospace' }}>{trade.buyer}</td>
-                    <td style={{ padding: '12px', color: '#94a3b8', fontSize: '13px', fontFamily: 'monospace' }}>{trade.seller}</td>
-                    <td style={{ padding: '12px', color: '#52b788', fontSize: '13px', fontWeight: '700' }}>{trade.credits?.toLocaleString()}</td>
-                    <td style={{ padding: '12px', color: '#f1f5f9', fontSize: '13px', fontWeight: '600' }}>${trade.price}</td>
-                    <td style={{ padding: '12px', color: '#f59e0b', fontSize: '13px', fontWeight: '600' }}>${(trade.credits * trade.price)?.toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#475569' }}>
-            <BarChart2 size={32} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-            <div style={{ fontSize: '14px' }}>No trades recorded yet.</div>
-            <div style={{ fontSize: '12px', marginTop: '4px' }}>Trades will appear here after a satellite verification mint.</div>
-          </div>
-        )}
-      </SectionCard>
-
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }
