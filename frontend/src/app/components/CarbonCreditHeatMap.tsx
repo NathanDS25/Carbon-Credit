@@ -7,26 +7,29 @@ const INDIA_GEO = 'https://gist.githubusercontent.com/jbrobst/56c13bbbf9d97d187f
 
 type Tier = 'Platinum' | 'Gold' | 'Silver' | 'Bronze';
 
+const INR = (usd: number) => Math.round(usd * 83.5);
+const fmtINR = (n: number) => `₹${n.toLocaleString('en-IN')}`;
+
 const TIER_CONFIG: Record<Tier, { color: string; glow: string; bg: string; border: string; minNdvi: number; priceRange: string }> = {
-  Platinum: { color: '#e2e8f0', glow: 'rgba(226,232,240,0.4)', bg: 'rgba(226,232,240,0.12)', border: 'rgba(226,232,240,0.4)', minNdvi: 0.75, priceRange: '$22–$25' },
-  Gold:     { color: '#fbbf24', glow: 'rgba(251,191,36,0.4)',  bg: 'rgba(251,191,36,0.12)',  border: 'rgba(251,191,36,0.4)',  minNdvi: 0.65, priceRange: '$17–$21' },
-  Silver:   { color: '#94a3b8', glow: 'rgba(148,163,184,0.4)', bg: 'rgba(148,163,184,0.12)', border: 'rgba(148,163,184,0.4)', minNdvi: 0.50, priceRange: '$13–$16' },
-  Bronze:   { color: '#c2713c', glow: 'rgba(194,113,60,0.4)',  bg: 'rgba(194,113,60,0.12)',  border: 'rgba(194,113,60,0.4)',  minNdvi: 0.00, priceRange: '$8–$12'  },
+  Platinum: { color: '#e2e8f0', glow: 'rgba(226,232,240,0.4)', bg: 'rgba(226,232,240,0.12)', border: 'rgba(226,232,240,0.4)', minNdvi: 0.75, priceRange: '₹1,837–₹2,088' },
+  Gold:     { color: '#fbbf24', glow: 'rgba(251,191,36,0.4)',  bg: 'rgba(251,191,36,0.12)',  border: 'rgba(251,191,36,0.4)',  minNdvi: 0.65, priceRange: '₹1,420–₹1,754' },
+  Silver:   { color: '#94a3b8', glow: 'rgba(148,163,184,0.4)', bg: 'rgba(148,163,184,0.12)', border: 'rgba(148,163,184,0.4)', minNdvi: 0.50, priceRange: '₹1,086–₹1,336' },
+  Bronze:   { color: '#c2713c', glow: 'rgba(194,113,60,0.4)',  bg: 'rgba(194,113,60,0.12)',  border: 'rgba(194,113,60,0.4)',  minNdvi: 0.00, priceRange: '₹668–₹1,002'   },
 };
 
 const NGOs = [
-  { id:1,  name: 'Wayanad Forest Trust',      state: 'Kerala',             lat:11.61, lon:76.04, ndvi:0.702, tier:'Gold'     as Tier, credits:12400, price:18.5, rating:4.9 },
-  { id:2,  name: 'Kodagu Green Shield',        state: 'Karnataka',          lat:12.42, lon:75.74, ndvi:0.780, tier:'Platinum' as Tier, credits:9800,  price:23.1, rating:4.8 },
-  { id:3,  name: 'Sahyadri Carbon Fund',       state: 'Maharashtra',        lat:17.10, lon:73.60, ndvi:0.660, tier:'Gold'     as Tier, credits:7600,  price:19.2, rating:4.7 },
-  { id:4,  name: 'Sundarbans Mangrove Trust',  state: 'West Bengal',        lat:21.94, lon:89.18, ndvi:0.680, tier:'Gold'     as Tier, credits:8700,  price:16.8, rating:4.6 },
-  { id:5,  name: 'Arunachal Bio Reserve',      state: 'Arunachal Pradesh',  lat:27.50, lon:93.80, ndvi:0.810, tier:'Platinum' as Tier, credits:21000, price:24.3, rating:4.9 },
-  { id:6,  name: 'Assam Rainforest Alliance',  state: 'Assam',              lat:26.20, lon:92.93, ndvi:0.620, tier:'Silver'   as Tier, credits:5400,  price:14.2, rating:4.3 },
-  { id:7,  name: 'Himalayan Belt Initiative',  state: 'Uttarakhand',        lat:30.07, lon:79.01, ndvi:0.580, tier:'Silver'   as Tier, credits:4100,  price:13.9, rating:4.4 },
-  { id:8,  name: 'HP Alpine Forest Fund',      state: 'Himachal Pradesh',   lat:31.90, lon:77.10, ndvi:0.590, tier:'Silver'   as Tier, credits:3800,  price:14.6, rating:4.3 },
-  { id:9,  name: 'Rajasthan Dryland Restore',  state: 'Rajasthan',          lat:26.90, lon:73.90, ndvi:0.350, tier:'Bronze'   as Tier, credits:2100,  price:9.4,  rating:3.9 },
-  { id:10, name: 'Gujarat Coastal Green',      state: 'Gujarat',            lat:22.25, lon:71.19, ndvi:0.410, tier:'Bronze'   as Tier, credits:2800,  price:10.1, rating:4.0 },
-  { id:11, name: 'Nilgiri Biosphere Trust',    state: 'Tamil Nadu',         lat:11.40, lon:76.70, ndvi:0.760, tier:'Platinum' as Tier, credits:15200, price:22.7, rating:4.8 },
-  { id:12, name: 'Odisha Forest Alliance',     state: 'Odisha',             lat:20.50, lon:84.00, ndvi:0.540, tier:'Silver'   as Tier, credits:4600,  price:13.1, rating:4.2 },
+  { id:1,  name: 'Wayanad Forest Trust',      state: 'Kerala',             lat:11.61, lon:76.04, ndvi:0.702, tier:'Gold'     as Tier, credits:12400, price:1545, rating:4.9 },
+  { id:2,  name: 'Kodagu Green Shield',        state: 'Karnataka',          lat:12.42, lon:75.74, ndvi:0.780, tier:'Platinum' as Tier, credits:9800,  price:1929, rating:4.8 },
+  { id:3,  name: 'Sahyadri Carbon Fund',       state: 'Maharashtra',        lat:17.10, lon:73.60, ndvi:0.660, tier:'Gold'     as Tier, credits:7600,  price:1603, rating:4.7 },
+  { id:4,  name: 'Sundarbans Mangrove Trust',  state: 'West Bengal',        lat:21.94, lon:89.18, ndvi:0.680, tier:'Gold'     as Tier, credits:8700,  price:1403, rating:4.6 },
+  { id:5,  name: 'Arunachal Bio Reserve',      state: 'Arunachal Pradesh',  lat:27.50, lon:93.80, ndvi:0.810, tier:'Platinum' as Tier, credits:21000, price:2029, rating:4.9 },
+  { id:6,  name: 'Assam Rainforest Alliance',  state: 'Assam',              lat:26.20, lon:92.93, ndvi:0.620, tier:'Silver'   as Tier, credits:5400,  price:1186, rating:4.3 },
+  { id:7,  name: 'Himalayan Belt Initiative',  state: 'Uttarakhand',        lat:30.07, lon:79.01, ndvi:0.580, tier:'Silver'   as Tier, credits:4100,  price:1161, rating:4.4 },
+  { id:8,  name: 'HP Alpine Forest Fund',      state: 'Himachal Pradesh',   lat:31.90, lon:77.10, ndvi:0.590, tier:'Silver'   as Tier, credits:3800,  price:1219, rating:4.3 },
+  { id:9,  name: 'Rajasthan Dryland Restore',  state: 'Rajasthan',          lat:26.90, lon:73.90, ndvi:0.350, tier:'Bronze'   as Tier, credits:2100,  price:785,  rating:3.9 },
+  { id:10, name: 'Gujarat Coastal Green',      state: 'Gujarat',            lat:22.25, lon:71.19, ndvi:0.410, tier:'Bronze'   as Tier, credits:2800,  price:843,  rating:4.0 },
+  { id:11, name: 'Nilgiri Biosphere Trust',    state: 'Tamil Nadu',         lat:11.40, lon:76.70, ndvi:0.760, tier:'Platinum' as Tier, credits:15200, price:1895, rating:4.8 },
+  { id:12, name: 'Odisha Forest Alliance',     state: 'Odisha',             lat:20.50, lon:84.00, ndvi:0.540, tier:'Silver'   as Tier, credits:4600,  price:1094, rating:4.2 },
 ];
 
 function TierBadge({ tier }: { tier: Tier }) {
@@ -58,6 +61,7 @@ function NGOPopup({ ngo, onClose, onSchedule }: { ngo: typeof NGOs[0]; onClose:(
         </div>
         <div>
           <div style={{ color:'#f1f5f9', fontWeight:'700', fontSize:'13px' }}>{ngo.name}</div>
+          {/* price shown below in stats grid */ }
           <div style={{ color:'#64748b', fontSize:'11px', display:'flex', alignItems:'center', gap:'4px' }}>
             <MapPin size={10}/> {ngo.state}
           </div>
@@ -80,8 +84,8 @@ function NGOPopup({ ngo, onClose, onSchedule }: { ngo: typeof NGOs[0]; onClose:(
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', marginBottom:'14px' }}>
         {[
-          { label:'Credits', value:ngo.credits.toLocaleString(), color:'#52b788' },
-          { label:'Price/tonne', value:`$${ngo.price}`, color:'#f59e0b' },
+          { label:'Credits', value:ngo.credits.toLocaleString('en-IN'), color:'#52b788' },
+          { label:'Price/tonne', value:`₹${ngo.price.toLocaleString('en-IN')}`, color:'#f59e0b' },
           { label:'Rating', value:`⭐ ${ngo.rating}/5`, color:'#a78bfa' },
           { label:'State', value:ngo.state, color:'#60a5fa' },
         ].map((s,i) => (
@@ -154,7 +158,7 @@ export function CarbonCreditHeatMap({ onScheduleMeet }: { onScheduleMeet?: (n:st
               <div style={{ color:cfg.color, fontWeight:'800', fontSize:'13px', marginBottom:'3px' }}>
                 {tier === 'Platinum' ? '💎' : tier === 'Gold' ? '🥇' : tier === 'Silver' ? '🥈' : '🥉'} {tier}
               </div>
-              <div style={{ color:'#f1f5f9', fontWeight:'700', fontSize:'20px' }}>${avg}</div>
+              <div style={{ color:'#f1f5f9', fontWeight:'700', fontSize:'20px' }}>₹{Math.round(Number(avg)).toLocaleString('en-IN')}</div>
               <div style={{ color:'#64748b', fontSize:'11px' }}>avg · {count} NGOs</div>
             </div>
           ))}
